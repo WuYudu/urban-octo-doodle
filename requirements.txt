@@ -1,0 +1,12 @@
+# 有序抓取 QUBO 实验：依赖
+# 安装：python -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+numpy>=2.0
+pillow>=10.0
+pulp>=4.2          # 含 HiGHS 后端，需要下一行的 highspy
+highspy>=1.10
+dimod>=0.12
+dwave-samplers>=1.8
+
+# 可选：只有要连 D-Wave 真机时才需要（solve.py --hw）
+# dwave-ocean-sdk>=7
