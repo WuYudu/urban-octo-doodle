@@ -150,9 +150,9 @@ def anneal_hardware(scene: Scene, pack: qubo.Pack, num_reads: int = 200,
 
     if not os.environ.get("DWAVE_API_TOKEN"):
         raise RuntimeError(
-            "未检测到 DWAVE_API_TOKEN。步骤：① 在 https://cloud.dwavesys.com/leap/ 注册并复制 API token；"
-            "② PowerShell 里执行 $env:DWAVE_API_TOKEN='你的token'；③ pip install dwave-ocean-sdk；"
-            "④ 重新运行本脚本并加 --hw。"
+            "DWAVE_API_TOKEN not set. Register at https://cloud.dwavesys.com/leap/, "
+            "copy the token, then run  $env:DWAVE_API_TOKEN='...'  and retry with --hw "
+            "(needs  pip install dwave-ocean-sdk)."
         )
     from dwave.system import DWaveSampler, EmbeddingComposite
 

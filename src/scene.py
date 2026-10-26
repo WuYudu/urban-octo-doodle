@@ -52,6 +52,7 @@ class Scene:
     budget: int
     levels: list[int] = None
     family: str = "clutter"
+    cand_blocked: list = None
 
     @property
     def n_obj(self) -> int:
@@ -81,21 +82,23 @@ def _place(rng: random.Random, n: int, canvas, max_overlap: float, margin: float
     return bodies
 
 
-def _candidates(b: Body, obj: int, quality: float, finger: float, max_opening: float) -> list[Grasp]:
+def _candidates(b: Body, obj: int, quality: float, finger: float, max_opening: float,
+                poses=((-0.26, 0.0), (0.0, 0.0), (0.26, 0.0))) -> list[Grasp]:
     major, minor, major_deg = (b.w, b.h, b.theta) if b.w >= b.h else (b.h, b.w, b.theta + 90.0)
-    opening_deg = major_deg + 90.0
     wg = min(0.90 * minor, max_opening)
     fit = max(0.0, 1.0 - abs(wg - minor) / minor)
     depth = min(1.0, finger / (1.2 * minor))
     out = []
-    for frac in (-0.26, 0.0, 0.26):
+    for frac, rot in poses:
         off = frac * major
         rad = math.radians(major_deg)
         cx = b.cx + off * math.cos(rad)
         cy = b.cy + off * math.sin(rad)
         centre = max(0.0, 1.0 - abs(off) / (0.5 * major))
-        raw = 0.50 * fit + 0.30 * centre + 0.20 * depth
-        out.append(Grasp(obj, cx, cy, wg, finger, opening_deg, round(min(1.0, raw) * quality, 4)))
+        tilt = max(0.0, 1.0 - abs(rot) / 45.0)
+        raw = (0.50 * fit + 0.30 * centre + 0.20 * depth) * tilt
+        out.append(Grasp(obj, cx, cy, wg, finger, major_deg + 90.0 + rot,
+                         round(min(1.0, raw) * quality, 4)))
     return out
 
 
@@ -109,11 +112,14 @@ def make_scene(
     quality_lo: float = 0.55,
     finger: float = 26.0,
     block_eps: float = 0.12,
+    poses=None,
 ) -> Scene:
     rng = random.Random(seed)
     bodies = _place(rng, n_obj, canvas, max_overlap, margin)
     quality = [rng.uniform(quality_lo, 1.0) for _ in bodies]
-    grasps = [_candidates(b, o, quality[o], finger, MAX_OPENING) for o, b in enumerate(bodies)]
+    kw = {} if poses is None else {"poses": poses}
+    grasps = [_candidates(b, o, quality[o], finger, MAX_OPENING, **kw)
+              for o, b in enumerate(bodies)]
     chosen = [max(range(len(grasps[o])), key=lambda c: grasps[o][c].score) for o in range(len(bodies))]
     blocked = []
     for o in range(len(bodies)):
@@ -122,7 +128,11 @@ def make_scene(
                         if p != o and geom.ios(poly, other.poly) > block_eps})
     if budget is None:
         budget = max(1, int(round(0.7 * n_obj)))
-    return Scene(bodies, grasps, chosen, blocked, budget, levels=[0] * n_obj, family="clutter")
+    cand_blocked = [[{p for p, other in enumerate(bodies)
+                      if p != o and geom.ios(g.poly, other.poly) > block_eps}
+                     for g in grasps[o]] for o in range(n_obj)]
+    return Scene(bodies, grasps, chosen, blocked, budget, levels=[0] * n_obj,
+                 family="clutter", cand_blocked=cand_blocked)
 
 
 def make_pile_scene(
@@ -134,8 +144,15 @@ def make_pile_scene(
     quality_lo: float = 0.55,
     finger: float = 26.0,
     stacked_ios: float = 0.15,
+    pose_eps: float = 0.12,
 ) -> Scene:
-    """Layered piles: an object can only be grasped once everything on top of it is gone."""
+    """Layered piles: an object can only be grasped once everything on top of it is gone.
+
+    cand_blocked[o][c] unions two reasons an object can be stuck: something above it
+    (level rule) and the chosen grasp rectangle physically overlapping a neighbour.
+    The second one is what makes the grasp pose matter, so only the candidate-level
+    encoder uses it; `blocked` keeps the level rule alone.
+    """
     rng = random.Random(seed)
     bodies: list[Body] = []
     levels: list[int] = []
@@ -171,5 +188,15 @@ def make_pile_scene(
                         and geom.ios(bodies[p].poly, bodies[o].poly) > stacked_ios})
     if budget is None:
         budget = max(1, int(round(0.7 * n_obj)))
-    return Scene(bodies, grasps, chosen, blocked, budget, levels=levels, family="piles")
+    cand_blocked = []
+    for o in range(n_obj):
+        per = []
+        for g in grasps[o]:
+            pose = {p for p in range(n_obj)
+                    if p != o and levels[p] >= levels[o]
+                    and geom.ios(g.poly, bodies[p].poly) > pose_eps}
+            per.append(blocked[o] | pose)
+        cand_blocked.append(per)
+    return Scene(bodies, grasps, chosen, blocked, budget, levels=levels,
+                 family="piles", cand_blocked=cand_blocked)
 
