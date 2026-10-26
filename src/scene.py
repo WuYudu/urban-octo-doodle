@@ -53,6 +53,7 @@ class Scene:
     levels: list[int] = None
     family: str = "clutter"
     cand_blocked: list = None
+    quality: list = None
 
     @property
     def n_obj(self) -> int:
@@ -132,7 +133,7 @@ def make_scene(
                       if p != o and geom.ios(g.poly, other.poly) > block_eps}
                      for g in grasps[o]] for o in range(n_obj)]
     return Scene(bodies, grasps, chosen, blocked, budget, levels=[0] * n_obj,
-                 family="clutter", cand_blocked=cand_blocked)
+                 family="clutter", cand_blocked=cand_blocked, quality=quality)
 
 
 def make_pile_scene(
@@ -145,6 +146,7 @@ def make_pile_scene(
     finger: float = 26.0,
     stacked_ios: float = 0.15,
     pose_eps: float = 0.12,
+    poses=None,
 ) -> Scene:
     """Layered piles: an object can only be grasped once everything on top of it is gone.
 
@@ -179,7 +181,8 @@ def make_pile_scene(
             levels.append(lv)
     n_obj = len(bodies)
     quality = [rng.uniform(quality_lo, 1.0) for _ in bodies]
-    grasps = [_candidates(b, o, quality[o], finger, MAX_OPENING) for o, b in enumerate(bodies)]
+    kw = {} if poses is None else {"poses": poses}
+    grasps = [_candidates(b, o, quality[o], finger, MAX_OPENING, **kw) for o, b in enumerate(bodies)]
     chosen = [max(range(len(grasps[o])), key=lambda c: grasps[o][c].score) for o in range(n_obj)]
     blocked = []
     for o in range(n_obj):
@@ -198,5 +201,5 @@ def make_pile_scene(
             per.append(blocked[o] | pose)
         cand_blocked.append(per)
     return Scene(bodies, grasps, chosen, blocked, budget, levels=levels,
-                 family="piles", cand_blocked=cand_blocked)
+                 family="piles", cand_blocked=cand_blocked, quality=quality)
 
