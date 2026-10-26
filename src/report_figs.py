@@ -42,7 +42,7 @@ def fig_structure(name="report_A_structure.png"):
     d = ImageDraw.Draw(img)
     d.text((40, 22), "问题结构：堆叠让“选哪些”变成“先抓哪个”", font=font(27), fill=INK)
 
-    # ① 示意：三层堆，上层压住下层
+    # 左：三层堆，上面压住下面
     d.text((70, 112), "① 料箱里的一个堆（示意）", font=font(17), fill=GRAY_TXT)
     pile = [(215, 210, 168, 62, -7), (205, 300, 178, 66, 4), (200, 392, 186, 60, -3)]
     names = ["上层", "中层", "底层"]
@@ -51,13 +51,13 @@ def fig_structure(name="report_A_structure.png"):
                   outline=(115, 115, 125), fill=(230, 230, 236))
         tw = d.textlength(nm, font=font(16))
         d.text((cx - tw / 2, cy - 10), nm, font=font(16), fill=(80, 80, 88))
-    # 抓取矩形（红色虚线框）压在中间物体上
+    # 红虚线框 = 抓取矩形，压在中间物体上
     gr = _rect_pts(215, 214, 150, 40, -7)
     for i in range(4):
         d.line([gr[i], gr[(i + 1) % 4]], fill=RED, width=2)
     d.text((300, 186), "抓取矩形", font=font(14), fill=RED)
     d.text((300, 208), "压下层 →", font=font(14), fill=RED)
-    # 右侧“必须先抓”箭头
+    # 中间那道向下箭头
     ax = 470
     for (y0, y1) in ((210, 300), (300, 392)):
         _arrow(d, (ax, y0 - 12), (ax, y1 + 12), BLUE, width=3)
@@ -66,7 +66,7 @@ def fig_structure(name="report_A_structure.png"):
     d.text((70, 470), "抓取矩形与下层实体重叠 > 阈值 →\n下层“被挡”，只能等上层被移走",
            font=font(15), fill=GRAY_TXT)
 
-    # ② 前置图：链
+    # 中：链，有解
     gx, gy = 600, 170
     d.text((gx - 30, gy - 46), "② 前置图：链（有解）", font=font(17), fill=GRAY_TXT)
     nodes = {"上层": (gx + 130, gy + 30), "下层": (gx + 130, gy + 150)}
@@ -78,7 +78,7 @@ def fig_structure(name="report_A_structure.png"):
     d.text((gx + 186, gy + 74), "必须先抓", font=font(14), fill=BLUE)
     d.text((gx - 10, gy + 200), "顺序存在 → 可解，只是要选一条\n收益最高的序列", font=font(15), fill=GRAY_TXT)
 
-    # ③ 前置图：环
+    # 右：环，谁都抓不了
     cx0, cy0 = 1000, 255
     d.text((cx0 - 60, gy - 46), "③ 互锁：环（死锁）", font=font(17), fill=GRAY_TXT)
     pa = (cx0 - 60, cy0)
@@ -134,7 +134,7 @@ def fig_encoding(name="report_B_encoding.png"):
                 tw = d.textlength(txt, font=font(20))
                 d.text((x + (cw - 8) / 2 - tw / 2, y + 14), txt, font=font(20), fill=GREEN)
 
-    # 右侧：四项
+    # 四项罚，一行一句
     lx, ly = 800, 140
     d.text((lx, ly - 36), "能量函数 = 四段惩罚 + 一个目标", font=font(18), fill=INK)
     items = [
@@ -203,7 +203,7 @@ def fig_divergence(name="report_C_divergence.png"):
     block(milp, 680, 118, "QUBO + MILP 全局最优 · 分数 10.499  (+6.46%)",
           "先付一次低价开通费，把两堆铲到底")
 
-    # 标出 MILP 的第一步（obj19 = 第 5 堆最上层）
+    # MILP 第一步：obj19，第 5 堆最上层
     o = 19
     cl, lv = o // PER, o % PER
     x = 680 + cl * 98
